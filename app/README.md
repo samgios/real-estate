@@ -11,6 +11,22 @@ npm run dev
 
 Open http://localhost:5173
 
+## Convex (backend)
+
+The app can use a [Convex](https://convex.dev) backend for real-time data. To hook up a new Convex project:
+
+1. **One-time setup** (from the `app/` directory):
+   ```bash
+   npx convex dev
+   ```
+   Log in with GitHub when prompted; this creates a Convex project, adds `convex/_generated/`, and writes `VITE_CONVEX_URL` to `.env.local`.
+
+2. **Restart the dev server** so it picks up `.env.local`. The app will then run with Convex connected.
+
+3. **Vercel:** In the project’s Environment Variables, add `VITE_CONVEX_URL` with the Convex deployment URL (from the Convex dashboard or `npx convex dev` output).
+
+Without `VITE_CONVEX_URL`, the app still runs using local/static data only.
+
 ## Build
 
 ```bash
