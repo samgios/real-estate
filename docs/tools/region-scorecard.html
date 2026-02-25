@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Region scorecard — Italy Deal #1</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 1rem 1.5rem; background: #f0f2f5; }
+    h1 { font-size: 1.35rem; margin-bottom: 0.25rem; color: #1a1a2e; }
+    .subtitle { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-direction: column; align-items: stretch; }
+    .filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; padding: 0.75rem 1rem; background: #fff; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+    .filters label { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; }
+    .filters select { padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 6px; font-size: 0.85rem; min-width: 140px; }
+    .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+    .btn { padding: 0.4rem 0.75rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; }
+    .btn:hover { background: #eee; }
+    .btn-primary { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+    .btn-primary:hover { background: #16213e; }
+    .count { font-size: 0.85rem; color: #666; }
+    .table-wrap { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    th, td { padding: 0.55rem 0.75rem; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #1a1a2e; color: #fff; font-weight: 600; font-size: 0.78rem; white-space: nowrap; cursor: pointer; user-select: none; }
+    th:hover { background: #16213e; }
+    th.sorted-asc::after { content: " ▲"; opacity: 0.9; }
+    th.sorted-desc::after { content: " ▼"; opacity: 0.9; }
+    tbody tr { cursor: pointer; }
+    tbody tr:hover { background: #f5f6f8; }
+    tbody tr.expanded { background: #f8f9fc; }
+    tbody tr.expanded + tr.detail-row { display: table-row; }
+    tr.detail-row { display: none; }
+    tr.detail-row td { padding: 0.75rem 1rem; font-size: 0.85rem; color: #444; border-bottom: 1px solid #e5e7eb; background: #f8f9fc; vertical-align: top; }
+    tr.detail-row td strong { color: #1a1a2e; }
+    .tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 500; }
+    .tag-yes { background: #d4edda; color: #155724; }
+    .tag-str-vh { background: #c3e6cb; color: #0d4d14; }
+    .tag-str-h { background: #cce5ff; color: #004085; }
+    .tag-str-m { background: #fff3cd; color: #856404; }
+    .tag-str-e { background: #e2e3e5; color: #383d41; }
+    .tag-permit-h { background: #d4edda; color: #155724; }
+    .tag-permit-m { background: #fff3cd; color: #856404; }
+    .tag-permit-l { background: #f8d7da; color: #721c24; }
+    .tag-permit-v { background: #e2e3e5; color: #383d41; }
+    .rank { font-weight: 700; color: #1a1a2e; }
+    .region-name { font-weight: 600; color: #1a1a2e; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>Region scorecard</h1>
+  <p class="subtitle">Click a row to expand details (financials, pros, cons, best for). Sort by column header. Filter and export to CSV. Data from research shortlist (Feb 2026).</p>
+
+  <div class="toolbar">
+    <div class="filters">
+      <label>STR demand: <select id="filterStr">
+        <option value="">All</option>
+        <option value="very-high">Very high</option>
+        <option value="high">High</option>
+        <option value="moderate">Moderate</option>
+        <option value="emerging">Emerging</option>
+      </select></label>
+      <label>Prefab viable: <select id="filterPrefab">
+        <option value="">All</option>
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select></label>
+      <label>Permit ease: <select id="filterPermit">
+        <option value="">Any</option>
+        <option value="high">High only</option>
+        <option value="moderate">Moderate or easier</option>
+      </select></label>
+      <label>€500k feasible: <select id="filter500">
+        <option value="">All</option>
+        <option value="yes">Yes</option>
+      </select></label>
+    </div>
+    <div class="actions">
+      <button class="btn" id="reset">Reset filters</button>
+      <button class="btn btn-primary" id="exportCsv">Export CSV</button>
+      <span class="count" id="count">Showing 0 of 8 regions</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="table">
+      <thead>
+        <tr>
+          <th data-key="rank">#</th>
+          <th data-key="region">Region</th>
+          <th data-key="eurSqmNum">€/m²</th>
+          <th data-key="feasible500">€500k?</th>
+          <th data-key="strOrder">STR demand</th>
+          <th data-key="valueAdd">Value-add / prefab</th>
+          <th data-key="permitOrder">Permit ease</th>
+          <th data-key="risk">Main risk</th>
+          <th data-key="bestFor">Best for</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const data = [
+      { rank: 1, region: "Puglia (Valle d'Itria / Salento)", eurSqm: "~1,437", eurSqmNum: 1437, feasible500: "Yes", strDemand: "Very high", strOrder: 4, valueAdd: "Moderate", permitEase: "Moderate", permitOrder: 2, risk: "Saturation in hubs", bestFor: "Luxury heritage STR, high international visibility", keyTowns: "Lecce, Ostuni, Polignano, Monopoli", financials: "Stone shell €150–200k + reno €200–250k = €400–450k. Season May–Oct; two airports.", pros: "High liquidity; established tourism; exceptional brand.", cons: "Increasing competition; Ostuni near price ceiling.", _prefab: "no" },
+      { rank: 2, region: "Sicily (Val di Noto)", eurSqm: "712–1,500", eurSqmNum: 1106, feasible500: "Yes", strDemand: "High", strOrder: 3, valueAdd: "Moderate", permitEase: "Moderate", permitOrder: 2, risk: "Logistics", bestFor: "Cultural STR and digital nomad long-stays", keyTowns: "Ragusa, Modica, Noto, Syracuse", financials: "100 m² premium €400k all-in. Ragusa €712/m² entry.", pros: "UNESCO heritage; year-round tourism; price growth potential.", cons: "Island logistics; infrastructure inconsistent in rural areas.", _prefab: "no" },
+      { rank: 3, region: "Umbria (inland)", eurSqm: "~1,173", eurSqmNum: 1173, feasible500: "Yes", strDemand: "High", strOrder: 3, valueAdd: "High", permitEase: "High", permitOrder: 3, risk: "Seasonality (no coast)", bestFor: "Countryside retreats, authentic village life", keyTowns: "Perugia, Todi, Orvieto, Assisi", financials: "€180–250k acquisition + €200k reno. Rome <2h.", pros: "Tuscan vibes, lower prices; expat-ready professionals.", cons: "No sea; winter demand softer outside cities.", _prefab: "no" },
+      { rank: 4, region: "Abruzzo (coast + inland)", eurSqm: "~1,379", eurSqmNum: 1379, feasible500: "Yes", strDemand: "Moderate", strOrder: 2, valueAdd: "High (prefab)", permitEase: "High", permitOrder: 3, risk: "Low brand awareness", bestFor: "Land + prefab, adventure-seeking guests", keyTowns: "Pescara, Vasto, Roccaraso, Penne", financials: "Land €30–50k near coast; land + prefab under €350k. Dual-season (beach + ski).", pros: "Welcoming for new builds; Rome 2h; nature.", cons: "Brand trailing Puglia; more domestic tourism.", _prefab: "yes" },
+      { rank: 5, region: "W. Liguria (Riviera di Ponente)", eurSqm: "2,500–3,000", eurSqmNum: 2750, feasible500: "Yes", strDemand: "Very high", strOrder: 4, valueAdd: "Low", permitEase: "Low", permitOrder: 1, risk: "High €/m²", bestFor: "Beachfront apartments, resilient capital value", keyTowns: "Sanremo, Bordighera, Imperia", financials: "€500k → 60–80 m² sea-view or small historic house. Season Mar–Oct.", pros: "Crisis-proof; elite reputation; Nice airport.", cons: "Strict coastal/historic codes; high transaction taxes.", _prefab: "no" },
+      { rank: 6, region: "Tuscany (Maremma / Arezzo)", eurSqm: "~1,684", eurSqmNum: 1684, feasible500: "Yes", strDemand: "Very high", strOrder: 4, valueAdd: "Very low", permitEase: "Low", permitOrder: 1, risk: "Saturated listings", bestFor: "Capital preservation, elite hospitality", keyTowns: "Cortona, Grosseto, Arezzo", financials: "€500k → 3-bed villa or farmhouse portion. Vincoli extend review 9+ months.", pros: "Unmatched brand; high liquidity; English-speaking support.", cons: "Saturated; high taxes and maintenance.", _prefab: "no" },
+      { rank: 7, region: "Molise (Termoli)", eurSqm: "~1,028", eurSqmNum: 1028, feasible500: "Yes", strDemand: "Emerging", strOrder: 1, valueAdd: "High", permitEase: "High", permitOrder: 3, risk: "Low liquidity", bestFor: "Ground-floor coastal growth, multi-unit", keyTowns: "Termoli", financials: "Second-row reno well under €500k; could secure two units. Gateway to Tremiti.", pros: "Lowest costs; uncrowded beaches; pro-investment local govt.", cons: "Limited infrastructure; winter occupancy low.", _prefab: "no" },
+      { rank: 8, region: "Calabria (Cedar Coast)", eurSqm: "~958", eurSqmNum: 958, feasible500: "Yes", strDemand: "Moderate", strOrder: 2, valueAdd: "High", permitEase: "Variable", permitOrder: 0, risk: "Weaker economy", bestFor: "Budget vacation rentals, low entry barrier", keyTowns: "Tropea, Scalea", financials: "Sea-view from €67k; €500k could do 4–6 units. Highly seasonal.", pros: "Stunning scenery; digital nomad interest growing.", cons: "Weaker economy; demand drops outside Jul–Aug.", _prefab: "no" },
+    ];
+
+    const tbody = document.getElementById("tbody");
+    let sortKey = "rank";
+    let sortDir = 1;
+    let filteredData = [...data];
+
+    function strTagClass(str) {
+      const m = { "Very high": "tag-str-vh", "High": "tag-str-h", "Moderate": "tag-str-m", "Emerging": "tag-str-e" };
+      return m[str] || "tag-str-m";
+    }
+    function permitTagClass(p) {
+      const m = { "High": "tag-permit-h", "Moderate": "tag-permit-m", "Low": "tag-permit-l", "Variable": "tag-permit-v" };
+      return m[p] || "tag-permit-v";
+    }
+
+    function render() {
+      const rows = filteredData.flatMap(r => {
+        const detailId = "detail-" + r.rank;
+        const mainRow = `
+          <tr data-rank="${r.rank}" class="main-row">
+            <td class="rank">${r.rank}</td>
+            <td class="region-name">${r.region}</td>
+            <td>${r.eurSqm}</td>
+            <td><span class="tag tag-yes">${r.feasible500}</span></td>
+            <td><span class="tag ${strTagClass(r.strDemand)}">${r.strDemand}</span></td>
+            <td>${r.valueAdd}</td>
+            <td><span class="tag ${permitTagClass(r.permitEase)}">${r.permitEase}</span></td>
+            <td>${r.risk}</td>
+            <td>${r.bestFor}</td>
+          </tr>`;
+        const detailRow = `
+          <tr class="detail-row" id="${detailId}" data-rank="${r.rank}">
+            <td colspan="9">
+              <div class="detail-grid">
+                <div><strong>Key towns:</strong> ${r.keyTowns}</div>
+                <div><strong>Best for:</strong> ${r.bestFor}</div>
+                <div><strong>Financials:</strong> ${r.financials}</div>
+                <div><strong>Pros:</strong> ${r.pros}</div>
+                <div><strong>Cons:</strong> ${r.cons}</div>
+              </div>
+            </td>
+          </tr>`;
+        return [mainRow, detailRow];
+      });
+      tbody.innerHTML = rows.join("");
+
+      document.querySelectorAll("tr.main-row").forEach(tr => {
+        tr.addEventListener("click", () => {
+          const rank = tr.dataset.rank;
+          const detail = document.querySelector(`tr.detail-row[data-rank="${rank}"]`);
+          const wasExpanded = tr.classList.contains("expanded");
+          document.querySelectorAll("tr.main-row").forEach(r => r.classList.remove("expanded"));
+          document.querySelectorAll("tr.detail-row").forEach(r => r.style.display = "none");
+          if (!wasExpanded) {
+            tr.classList.add("expanded");
+            detail.style.display = "table-row";
+          }
+        });
+      });
+
+      document.getElementById("count").textContent = `Showing ${filteredData.length} of ${data.length} regions`;
+    }
+
+    function applyFiltersAndSort() {
+      const str = document.getElementById("filterStr").value;
+      const prefab = document.getElementById("filterPrefab").value;
+      const permit = document.getElementById("filterPermit").value;
+      const feas = document.getElementById("filter500").value;
+
+      filteredData = data.filter(r => {
+        if (str && r.strDemand !== (str === "very-high" ? "Very high" : str === "emerging" ? "Emerging" : str.charAt(0).toUpperCase() + str.slice(1))) return false;
+        if (prefab && r._prefab !== prefab) return false;
+        if (feas && r.feasible500 !== "Yes") return false;
+        if (permit === "high" && r.permitOrder < 3) return false;
+        if (permit === "moderate" && r.permitOrder < 2) return false;
+        return true;
+      });
+
+      const key = sortKey === "eurSqm" ? "eurSqmNum" : sortKey;
+      filteredData.sort((a, b) => {
+        const va = a[key], vb = b[key];
+        if (typeof va === "number" && typeof vb === "number") return (va - vb) * sortDir;
+        return String(va).localeCompare(String(vb)) * sortDir;
+      });
+
+      render();
+    }
+
+    document.querySelectorAll("#table th[data-key]").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.key;
+        if (sortKey === key) sortDir *= -1; else { sortKey = key; sortDir = key === "rank" ? 1 : -1; }
+        document.querySelectorAll("#table th").forEach(h => h.classList.remove("sorted-asc", "sorted-desc"));
+        th.classList.add(sortDir === 1 ? "sorted-asc" : "sorted-desc");
+        applyFiltersAndSort();
+      });
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      document.getElementById("filterStr").value = "";
+      document.getElementById("filterPrefab").value = "";
+      document.getElementById("filterPermit").value = "";
+      document.getElementById("filter500").value = "";
+      applyFiltersAndSort();
+    });
+
+    document.getElementById("exportCsv").addEventListener("click", () => {
+      const headers = ["Rank", "Region", "€/m²", "€500k?", "STR demand", "Value-add", "Permit ease", "Main risk", "Best for", "Key towns"];
+      const rows = filteredData.map(r => [r.rank, r.region, r.eurSqm, r.feasible500, r.strDemand, r.valueAdd, r.permitEase, r.risk, r.bestFor, r.keyTowns]);
+      const csv = [headers.join(","), ...rows.map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "italy-region-scorecard.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    ["filterStr", "filterPrefab", "filterPermit", "filter500"].forEach(id => document.getElementById(id).addEventListener("change", applyFiltersAndSort));
+
+    applyFiltersAndSort();
+  </script>
+</body>
+</html>

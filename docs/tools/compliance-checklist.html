@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Compliance checklist — Italy Deal #1</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 0 auto; padding: 1rem 1.5rem; background: #f8f9fa; }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
+    h2 { font-size: 1rem; margin: 1.25rem 0 0.5rem 0; color: #1a1a2e; }
+    .list { background: #fff; border-radius: 8px; padding: 0.75rem 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    label { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.4rem 0; cursor: pointer; font-size: 0.9rem; }
+    input[type="checkbox"] { margin-top: 0.25rem; flex-shrink: 0; }
+    label.done { color: #666; }
+    label.done span { text-decoration: line-through; }
+    .btn { margin-top: 1rem; padding: 0.4rem 0.75rem; font-size: 0.85rem; border: 1px solid #ccc; border-radius: 6px; background: #fff; cursor: pointer; }
+    .btn:hover { background: #eee; }
+  </style>
+</head>
+<body>
+  <h1>Compliance checklist</h1>
+  <p>Check off as you go. State is saved in this browser (localStorage).</p>
+
+  <h2>Italy — pre-launch</h2>
+  <div class="list" id="italy"></div>
+
+  <h2>Canada — ongoing</h2>
+  <div class="list" id="canada"></div>
+
+  <button class="btn" id="reset">Clear all</button>
+
+  <script>
+    const STORAGE_KEY = "italy-deal-compliance";
+
+    const italyItems = [
+      "Codice Fiscale (all directors/shareholders)",
+      "Reciprocity confirmed for target comune with notary",
+      "S.r.l. incorporated (Atto Costitutivo, Statuto, Registro delle Imprese)",
+      "Corporate bank account open (or nominee/proxy in place)",
+      "Geometra: Conformità Urbanistica e Catastale verified",
+      "Purchase: compromesso transcribed, rogito signed, taxes paid",
+      "Building/reno permits (CILA / SCIA / PdC) in place",
+      "Construction: CAR + RC Postuma (if heavy reno/new build)",
+      "Regional CIR (Puglia: DMS Puglia) obtained",
+      "CIN obtained (BDSR portal) and displayed",
+      "RCT insurance (mandatory for STR; €500k–1.5M typical)",
+      "STR-specific policy (guest damage, loss of income) if required",
+      "CIA/SCIA for entrepreneurial activity (SUAP)",
+      "Alloggiati Web access (guest reporting)",
+      "SPOT (Puglia) or regional monthly reporting set up",
+      "Tourist tax registration (comune)",
+      "Safety: extinguishers, gas/CO detectors installed and certified",
+    ];
+
+    const canadaItems = [
+      "T1134 (foreign affiliate) filed if S.r.l. held — deadline 10 months after year-end",
+      "T1135 filed if other specified foreign property >$100k CAD",
+      "Quebec TP-1079.8.BE-V if applicable (from 2025)",
+      "ACB tracked: BoC exchange rate on date of each payment (purchase + reno)",
+      "Invoices and payment receipts kept for all reno spend",
+      "Canadian tax advisor briefed on structure (FAPI, RTF, exit)",
+    ];
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) { return {}; }
+    }
+
+    function save(state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function render(containerId, items, prefix) {
+      const state = load();
+      const container = document.getElementById(containerId);
+      container.innerHTML = items.map((text, i) => {
+        const key = prefix + i;
+        const checked = state[key];
+        return `<label class="${checked ? "done" : ""}"><input type="checkbox" data-key="${key}" ${checked ? "checked" : ""} /><span>${text}</span></label>`;
+      }).join("");
+
+      container.querySelectorAll("input[type=checkbox]").forEach(cb => {
+        cb.addEventListener("change", () => {
+          const s = load();
+          s[cb.dataset.key] = cb.checked;
+          save(s);
+          cb.closest("label").classList.toggle("done", cb.checked);
+        });
+      });
+    }
+
+    document.getElementById("reset").addEventListener("click", () => {
+      if (confirm("Clear all checkboxes?")) { save({}); document.querySelectorAll("input[type=checkbox]").forEach(c => { c.checked = false; c.closest("label").classList.remove("done"); }); }
+    });
+
+    render("italy", italyItems, "it");
+    render("canada", canadaItems, "ca");
+  </script>
+</body>
+</html>

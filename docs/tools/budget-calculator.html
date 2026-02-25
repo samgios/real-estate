@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Budget calculator — Italy Deal #1</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 560px; margin: 0 auto; padding: 1rem 1.5rem; background: #f8f9fa; }
+    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+    p { color: #555; font-size: 0.9rem; margin-bottom: 1rem; }
+    label { display: block; margin-top: 0.75rem; font-size: 0.9rem; font-weight: 500; }
+    input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; margin-top: 0.25rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .out { background: #1a1a2e; color: #fff; padding: 1rem 1.25rem; border-radius: 8px; margin-top: 1.5rem; }
+    .out h2 { font-size: 0.9rem; margin: 0 0 0.5rem 0; opacity: 0.9; }
+    .out .big { font-size: 1.5rem; font-weight: 700; }
+    .out table { width: 100%; margin-top: 0.75rem; font-size: 0.85rem; }
+    .out td { padding: 0.25rem 0; }
+    .out td:last-child { text-align: right; }
+    .yield { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Budget calculator</h1>
+  <p>Enter purchase and reno; get total EUR and CAD. Optional: ADR and occupancy for a simple gross STR yield.</p>
+
+  <label>Purchase price (€)</label>
+  <input type="number" id="purchase" value="300000" min="0" step="10000" />
+
+  <label>Renovation budget (€)</label>
+  <input type="number" id="reno" value="180000" min="0" step="10000" />
+
+  <div class="row">
+    <div>
+      <label>Transaction + setup (% of purchase, e.g. 17)</label>
+      <input type="number" id="txPct" value="17" min="0" max="25" step="0.5" />
+    </div>
+    <div>
+      <label>CAD/EUR rate (e.g. 1.5)</label>
+      <input type="number" id="fx" value="1.5" min="1.3" max="1.8" step="0.01" />
+    </div>
+  </div>
+
+  <label style="margin-top: 1.25rem;">Optional — STR yield</label>
+  <div class="row">
+    <div>
+      <label>ADR (€/night, e.g. 150)</label>
+      <input type="number" id="adr" value="150" min="0" step="10" />
+    </div>
+    <div>
+      <label>Occupancy (nights/year, e.g. 120)</label>
+      <input type="number" id="occ" value="120" min="0" max="365" step="5" />
+    </div>
+  </div>
+
+  <div class="out" id="out">
+    <h2>Total budget</h2>
+    <div class="big" id="totalEur">—</div>
+    <div id="totalCad">—</div>
+    <table>
+      <tr><td>Purchase</td><td id="linePurchase">—</td></tr>
+      <tr><td>Renovation</td><td id="lineReno">—</td></tr>
+      <tr><td>Transaction + setup</td><td id="lineTx">—</td></tr>
+    </table>
+    <div class="yield" id="yieldBlock">
+      <h2>Gross STR yield (simplified)</h2>
+      <div id="yieldText">—</div>
+    </div>
+  </div>
+
+  <script>
+    const purchaseEl = document.getElementById("purchase");
+    const renoEl = document.getElementById("reno");
+    const txPctEl = document.getElementById("txPct");
+    const fxEl = document.getElementById("fx");
+    const adrEl = document.getElementById("adr");
+    const occEl = document.getElementById("occ");
+
+    function formatEur(n) { return new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n); }
+    function formatCad(n) { return new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD", maximumFractionDigits: 0 }).format(n); }
+
+    function update() {
+      const purchase = Number(purchaseEl.value) || 0;
+      const reno = Number(renoEl.value) || 0;
+      const txPct = Number(txPctEl.value) || 0;
+      const fx = Number(fxEl.value) || 1.5;
+      const adr = Number(adrEl.value) || 0;
+      const occ = Number(occEl.value) || 0;
+
+      const tx = purchase * (txPct / 100);
+      const totalEur = purchase + reno + tx;
+
+      document.getElementById("totalEur").textContent = formatEur(totalEur);
+      document.getElementById("totalCad").textContent = formatCad(totalEur * fx);
+      document.getElementById("linePurchase").textContent = formatEur(purchase);
+      document.getElementById("lineReno").textContent = formatEur(reno);
+      document.getElementById("lineTx").textContent = formatEur(tx);
+
+      const yieldBlock = document.getElementById("yieldBlock");
+      const yieldText = document.getElementById("yieldText");
+      if (adr > 0 && occ > 0 && totalEur > 0) {
+        const grossRev = adr * occ;
+        const yieldPct = (grossRev / totalEur) * 100;
+        yieldText.textContent = `Gross revenue ${formatEur(grossRev)}/year → ${yieldPct.toFixed(1)}% gross yield (before tax, insurance, management, etc.).`;
+        yieldBlock.style.display = "block";
+      } else {
+        yieldBlock.style.display = "none";
+      }
+    }
+
+    [purchaseEl, renoEl, txPctEl, fxEl, adrEl, occEl].forEach(el => el.addEventListener("input", update));
+    update();
+  </script>
+</body>
+</html>
